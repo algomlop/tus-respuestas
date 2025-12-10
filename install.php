@@ -1,69 +1,68 @@
 <?php
-// install.php - Instalación y configuración inicial del sistema
+// install.php - Actualizado para MySQL
 session_start();
+require_once 'config.php';
+require_once 'db.php'; // Cargamos para usar la conexión PDO si ya existe la DB
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        // Crear base de datos
-        $db = new SQLite3('survey_data.db');
-        
-        // Tabla de preguntas con opciones múltiples
+        $db = new Database(); // Usará las credenciales de config.php
+
+        // Tablas con sintaxis MySQL
         $db->exec("
             CREATE TABLE IF NOT EXISTS questions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id INT AUTO_INCREMENT PRIMARY KEY,
                 text TEXT NOT NULL,
-                num_options INTEGER DEFAULT 2,
+                num_options INT DEFAULT 2,
                 option_labels TEXT NOT NULL,
-                auto_close INTEGER DEFAULT 0,
-                close_seconds INTEGER DEFAULT 30,
+                auto_close TINYINT(1) DEFAULT 0,
+                close_seconds INT DEFAULT 30,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
+            ) ENGINE=InnoDB;
         ");
         
-        // Tabla de instancias de encuesta
         $db->exec("
             CREATE TABLE IF NOT EXISTS survey_instances (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                code TEXT UNIQUE NOT NULL,
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                code VARCHAR(50) UNIQUE NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
+            ) ENGINE=InnoDB;
         ");
         
-        // Tabla de respuestas
+        // Tabla answers actualizada con campo EMAIL y clave única compuesta
         $db->exec("
             CREATE TABLE IF NOT EXISTS answers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                survey_code TEXT NOT NULL,
-                question_id INTEGER NOT NULL,
-                session_id TEXT NOT NULL,
-                answer INTEGER NOT NULL,
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                survey_code VARCHAR(50) NOT NULL,
+                question_id INT NOT NULL,
+                session_id VARCHAR(100) NOT NULL,
+                answer INT NOT NULL,
+                email VARCHAR(255) NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(survey_code, question_id, session_id)
-            )
+                UNIQUE KEY unique_answer (survey_code, question_id, session_id)
+            ) ENGINE=InnoDB;
         ");
         
-        // Tabla de estado de preguntas
         $db->exec("
             CREATE TABLE IF NOT EXISTS question_status (
-                survey_code TEXT NOT NULL,
-                question_id INTEGER NOT NULL,
-                status TEXT DEFAULT 'off',
-                started_at DATETIME,
+                survey_code VARCHAR(50) NOT NULL,
+                question_id INT NOT NULL,
+                status VARCHAR(20) DEFAULT 'off',
+                started_at DATETIME NULL,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (survey_code, question_id)
-            )
+            ) ENGINE=InnoDB;
         ");
         
-        $db->close();
-        
         $success = true;
-        $message = "¡Base de datos instalada correctamente! Puedes acceder al panel de administración.";
+        $message = "¡Base de datos MySQL instalada y actualizada correctamente!";
     } catch (Exception $e) {
         $success = false;
-        $message = "Error durante la instalación: " . $e->getMessage();
+        $message = "Error: " . $e->getMessage();
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
